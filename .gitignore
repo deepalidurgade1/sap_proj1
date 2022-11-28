@@ -1,1 +1,2 @@
 # write file names that should be ignored while commit on git
+git_commands.txt
