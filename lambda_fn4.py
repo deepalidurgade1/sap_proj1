@@ -5,7 +5,6 @@ iimport json
 import boto3
 from botocore.exceptions import ClientError
 
-
 AWS_REGION = "ap-south-1"
 
 def lambda_handler(event, context):
