@@ -1,0 +1,217 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "GetCrawler1",
+  "States": {
+    "GetCrawler1": {
+      "Type": "Task",
+      "Next": "Choice1",
+      "Parameters": {
+        "Name": "crawler1-sap-raw-zone"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:glue:getCrawler",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Lambda Invoke5"
+        }
+      ]
+    },
+    "Choice1": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Crawler.State",
+          "StringEquals": "READY",
+          "Next": "Glue StartJobRun1"
+        }
+      ],
+      "Default": "Wait"
+    },
+    "Wait": {
+      "Type": "Wait",
+      "Seconds": 5,
+      "Next": "GetCrawler1"
+    },
+    "Glue StartJobRun1": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "SAP_spark_job1"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Lambda Invoke5"
+        }
+      ],
+      "Next": "GetCrawler2"
+    },
+    "GetCrawler2": {
+      "Type": "Task",
+      "Parameters": {
+        "Name": "crawler2-sap-transform-zone"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:glue:getCrawler",
+      "Next": "Choice2",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Lambda Invoke5"
+        }
+      ]
+    },
+    "Choice2": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Crawler.State",
+          "StringEquals": "READY",
+          "Next": "Glue StartJobRun2"
+        }
+      ],
+      "Default": "Wait2"
+    },
+    "Glue StartJobRun2": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "SAP_spark_job2"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Lambda Invoke5"
+        }
+      ],
+      "Next": "GetCrawler3"
+    },
+    "GetCrawler3": {
+      "Type": "Task",
+      "Parameters": {
+        "Name": "crawler3-sap-confirm-zone"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:glue:getCrawler",
+      "Next": "Choice3",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Lambda Invoke5"
+        }
+      ]
+    },
+    "Choice3": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Crawler.State",
+          "StringEquals": "READY",
+          "Next": "Glue StartJobRun3"
+        }
+      ],
+      "Default": "Wait3"
+    },
+    "Glue StartJobRun3": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "SAP_spark_job3"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Lambda Invoke5"
+        }
+      ],
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "BackoffRate": 1,
+          "IntervalSeconds": 1,
+          "MaxAttempts": 2
+        }
+      ],
+      "Next": "GetCrawler4"
+    },
+    "GetCrawler4": {
+      "Type": "Task",
+      "Parameters": {
+        "Name": "crawler4-sap-enrich-zone"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:glue:getCrawler",
+      "Next": "Choice4",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Lambda Invoke5"
+        }
+      ]
+    },
+    "Choice4": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Crawler.State",
+          "StringEquals": "READY",
+          "Next": "Success"
+        }
+      ],
+      "Default": "Wait (1)"
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "Wait (1)": {
+      "Type": "Wait",
+      "Seconds": 5,
+      "Next": "GetCrawler4"
+    },
+    "Wait3": {
+      "Type": "Wait",
+      "Seconds": 5,
+      "Next": "GetCrawler3"
+    },
+    "Wait2": {
+      "Type": "Wait",
+      "Seconds": 5,
+      "Next": "GetCrawler2"
+    },
+    "Lambda Invoke5": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "arn:aws:lambda:ap-south-1:035336637812:function:sap-exception-handling:$LATEST"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "End": true
+    }
+  }
+}
